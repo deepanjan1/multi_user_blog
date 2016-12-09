@@ -1,0 +1,12 @@
+past_homework/hw3/app.yaml
+past_homework/hw3/blog.py
+past_homework/hw3/index.yaml
+past_homework/hw3/static/main.css
+past_homework/hw3/templates/base.html
+past_homework/hw3/templates/front.html
+past_homework/hw3/templates/newpost.html
+past_homework/hw3/templates/permalink.html
+past_homework/hw3/templates/post.html
+past_homework/hw3/templates/rot13-form.html
+past_homework/hw3/templates/signup-form.html
+past_homework/hw3/templates/welcome.html

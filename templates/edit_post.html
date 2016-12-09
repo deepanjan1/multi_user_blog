@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class = "post">
+	<h2>Edit Post</h1>
+		<form method="post">
+			<h3>Subject<h3>
+			<input type="text" name="subject" value = "{{ blog.subject }}">
+			<br>
+			<h3>Blog</h3>
+			<textarea rows = "20" cols="80" name="blog_content">{{ blog.blog_content }}</textarea>
+			<br>
+			<input type="submit" name="{{ blog.key().id() }}" value = "Save">
+			{% if error %}
+				<p class = "error_message", style = "color: red">{{ error }}</p>
+			{% endif %}
+			<p> 
+		</form>
+</div>
+
+{% endblock %}

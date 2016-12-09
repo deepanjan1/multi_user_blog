@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class = "post">
+	<h2 class = "subject" style = "text-align: center">{{ post.subject }}</h2>
+	<hr>
+	<p class = "date" style = "text-align: center">Date Created:  {{ post.created.month }}/{{ post.created.day }}/{{ post.created.year }}</p>
+	<pre class = "blog_post">{{ post.blog_content | safe }}</pre>
+	{% if user == post.creator %}
+	<p class = "edit_delete"> 
+		<a href = "#">Edit</a>
+		<text>/</text>
+		<a href = "#">Delete</a>
+	</p>
+	{% endif %}
+</div>
+
+{% endblock %}
