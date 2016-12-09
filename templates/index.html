@@ -11,6 +11,12 @@
 		<form class = "edit_delete">
 			<button formmethod="post" value="{{entry.key().id()}}" name = "edit">Edit</button> 
 			<button formmethod="post" value="{{ entry.key().id() }}" name="delete">Delete</button>
+			<div = "like">
+				<text>{{ entry.like_count }}</text>
+				<img src="">
+				<text>{{ entry.unlike_count }}</text>
+				<img src="">
+			</div>
 		</form>
 	</div>
 	{% endfor %}

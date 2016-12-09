@@ -7,6 +7,7 @@ import hmac
 import random
 import hashlib
 import string
+import config
 
 from google.appengine.ext import db
 
@@ -14,7 +15,7 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
 								autoescape = True)
 
-secret = "bJXzCSW#n.Re{%WL+8G;/:hxn/t6"
+secret = config.secret
 
 #Hashing functions
 def make_secure_val(val):
@@ -274,9 +275,8 @@ class EditPost(Handler):
 			post.blog_content = blog_content
 			post.put()
 			self.redirect('/blog/%s' % str(post.key().id()))
-		else:
-			error  = "Please submit both a subject and blog content."
-			#self.render_newpost(subject, blog_content, error)
+		elif self.request.get('Cancel'):
+			self.redirect('/blog/')
 
 class DeletePost(Handler):
 	def get(self, post):

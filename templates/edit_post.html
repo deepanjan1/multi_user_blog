@@ -12,6 +12,7 @@
 			<textarea rows = "20" cols="80" name="blog_content">{{ blog.blog_content }}</textarea>
 			<br>
 			<button type="submit" value="{{ blog.key().id() }}" name="Save">Save</button>
+			<button type="submit" value="True" name="Cancel">Cancel</button>
 			{% if error %}
 				<p class = "error_message", style = "color: red">{{ error }}</p>
 			{% endif %}
