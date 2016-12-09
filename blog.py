@@ -72,6 +72,9 @@ class Handler(webapp2.RequestHandler):
 		uid = self.read_secure_cookie('userid')
 		self.user = uid and Users.by_id(int(uid))
 
+	def get_post_by_id(self, post_id):
+		return Post_Entry.get_by_id(int(post_id))
+
 #Blog and Users Table
 class Post_Entry(db.Model):
 	subject = db.StringProperty(required = True)
@@ -114,12 +117,18 @@ class MainPage(Handler):
 		self.render('index.html', entries=entries)
 	def post(self):
 		if self.request.get('edit'):
-			post_id = self.request.get('edit')
-			post = Post_Entry.get_by_id(int(post_id))
+			post = self.get_post_by_id(self.request.get('edit'))
 			if self.read_secure_cookie('userid') == post.creator:
 				self.redirect('/blog/edit_post/%s' % str(post.key().id()))
 			else:
 				self.redirect('/blog/edit_post/error')
+		elif self.request.get('delete'):
+			post = self.get_post_by_id(self.request.get('delete'))
+			if self.read_secure_cookie('userid') == post.creator:
+				self.redirect('/blog/delete_post/%s' % str(post.key().id()))
+			else:
+				self.redirect('/blog/delete_post/error')
+			
 
 class NewPost(Handler):
 	def render_newpost(self, subject="", blog_content="", error=""):
@@ -144,6 +153,19 @@ class PostPage(Handler):
 		post = db.get(key)
 		user = self.read_secure_cookie('userid')
 		self.render('permalink.html', post = post, user = user)
+	def post(self, post_id):
+		if self.request.get('edit'):
+			post = self.get_post_by_id(self.request.get('edit'))
+			if self.read_secure_cookie('userid') == post.creator:
+				self.redirect('/blog/edit_post/%s' % str(post.key().id()))
+			else:
+				self.redirect('/blog/edit_post/error')
+		elif self.request.get('delete'):
+			post = self.get_post_by_id(self.request.get('delete'))
+			if self.read_secure_cookie('userid') == post.creator:
+				self.redirect('/blog/delete_post/%s' % str(post.key().id()))
+			else:
+				self.redirect('/blog/delete_post/error')
 
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
@@ -241,9 +263,8 @@ class EditPost(Handler):
 	def get(self, post):
 		key = db.Key.from_path('Post_Entry', int(post))
 		post = db.get(key)
-		import pdb; pdb.set_trace()	
 		self.render('edit_post.html', blog = post)
-	def post(self):
+	def post(self, post):
 		subject = self.request.get('subject')
 		blog_content = self.request.get('blog_content')
 		post_id = self.request.get('Save')
@@ -251,15 +272,32 @@ class EditPost(Handler):
 			post = Post_Entry.get_by_id(int(post_id))
 			post.subject = subject
 			post.blog_content = blog_content
-			post.update()
-			self.redirect('/blog/')
+			post.put()
+			self.redirect('/blog/%s' % str(post.key().id()))
 		else:
 			error  = "Please submit both a subject and blog content."
 			#self.render_newpost(subject, blog_content, error)
 
+class DeletePost(Handler):
+	def get(self, post):
+		key = db.Key.from_path('Post_Entry', int(post))
+		post = db.get(key)
+		self.render('delete_post.html', blog = post)
+	def post(self, post):
+		if self.request.get('Delete'):
+			post = self.get_post_by_id(self.request.get('Delete'))
+			post.delete()
+			self.redirect('/blog/post_update')
+		elif self.request.get('Cancel'):
+			self.redirect('/blog/')
+
 class ErrorPage(Handler):
 	def get(self):
 		self.render('error_page.html')
+
+class StatusUpdate(Handler):
+	def get(self):
+		self.render('updated.html')
 
 
 app = webapp2.WSGIApplication([('/blog/?', MainPage),
@@ -271,5 +309,8 @@ app = webapp2.WSGIApplication([('/blog/?', MainPage),
 	                           ('/blog/logout', Logout),
 	                           ('/blog/edit_post/([0-9]+)', EditPost),
 	                           ('/blog/edit_post/error', ErrorPage),
+	                           ('/blog/delete_post/([0-9]+)', DeletePost),
+	                           ('/blog/delete_post/error', ErrorPage),
+	                           ('/blog/post_update', StatusUpdate),
 	                           ], 
 								debug=True)
