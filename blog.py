@@ -89,28 +89,6 @@ class Users(db.Model):
 	password = db.StringProperty(required = True)
 	email = db.StringProperty(required = False)
 
-	@classmethod
-	def by_id(cls, uid):
-	    return cls.get_by_id(uid)
-
-	@classmethod
-	def by_name(cls, name):
-	    u = cls.all().filter('username =', name).get()
-	    return u
-
-	@classmethod
-	def register(cls, name, pw, email = None):
-	    pw_hash = make_pw_hash(name, pw)
-	    return cls( username = name,
-	                password = pw_hash,
-	                email = email)
-
-	@classmethod
-	def login(cls, name, pw):
-	    u = cls.by_name(username)
-	    if u and valid_pw(name, pw, u.password):
-	        return u
-
 #Page Handlers
 class MainPage(Handler):
 	def get(self):
