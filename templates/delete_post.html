@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class = "post">
+		<h2>Are You Sure You Want To Delete This Post?</h1>
+	<form method="post">
+		<h3>Subject</h3>
+		<h4>{{ blog.subject }}</h4>
+		<br>
+		<h4>Blog</h4>
+		<p>{{ blog.blog_content }}</p>
+		<br>
+		<button type="submit" value="{{ blog.key().id() }}" name="Delete">Delete</button>
+		<button type="submit" value="True" name="Cancel">Cancel</button>
+	</form>
+</div>
+
+{% endblock %}
