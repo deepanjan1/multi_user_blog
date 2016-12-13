@@ -11,13 +11,10 @@
 		<form class = "edit_delete">
 			<button formmethod="post" value="{{entry.key().id()}}" name="edit">Edit</button> 
 			<button formmethod="post" value="{{entry.key().id()}}" name="delete">Delete</button>
-			{% if not likes.filter("post =", entry.key().id()) %}
-				<button formmethod="post" value="{{entry.key().id()}}" name="like">Like</button>
-			{% else %}
-				<button formmethod="post" value="{{entry.key().id()}}" name="like">Liked</button>
-			{% endif %}
+			<button formmethod="post" value="{{entry.key().id()}}" name="like">Like</button>
 			<button formmethod="post" value="{{entry.key().id()}}" name="comment">Comment</button>
 		</form>
+		<p> This post received {{ entry.like }} like(s)</p>
 	</div>
 	{% endfor %}
 </div>
