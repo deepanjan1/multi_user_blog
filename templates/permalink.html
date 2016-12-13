@@ -6,14 +6,27 @@
 	<hr>
 	<p class = "date" style = "text-align: center">Date Created:  {{ post.created.month }}/{{ post.created.day }}/{{ post.created.year }}</p>
 	<pre class = "blog_post">{{ post.blog_content | safe }}</pre>
-	{% if user == post.creator %}
 	<form method="post">
 	<p class = "edit_delete"> 
 		<button type="submit" value="{{ post.key().id() }}" name="edit">Edit</button>
 		<button type="submit" value="{{ post.key().id() }}" name="delete">Delete</button>
+		<button type="submit" value="{{ post.key().id() }}" name="like">Like</button>
 	</p>
 	</form>
-	{% endif %}
+	<form method="post">
+		<h4>Make Comment</h4>
+		<input type="hidden" value="{{post.key().id()}}" name="post">
+		<textarea rows = "10" cols="80" name="make_comment"></textarea>
+		<br>
+		<button>Submit</button>
+		{% for comment in comments %}
+			<div class = "comments">
+				<h4>Comment</h4>
+				<pre>{{ comment.comment | safe }}</pre>
+				<p>Created: {{ comment.created }}</p>
+			</div>
+		{% endfor %}
+	</form>
 </div>
 
 {% endblock %}

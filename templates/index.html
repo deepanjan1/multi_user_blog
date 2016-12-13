@@ -9,12 +9,14 @@
 		<p class = "date" style = "text-align: center">Date Created:  {{ entry.created.month }}/{{ entry.created.day }}/{{ entry.created.year }}</p>
 		<pre class = "blog_entry">{{ entry.blog_content | safe }}</pre>
 		<form class = "edit_delete">
-			<button formmethod="post" value="{{entry.key().id()}}" name = "edit">Edit</button> 
-			<button formmethod="post" value="{{ entry.key().id() }}" name="delete">Delete</button>
-			<div = "like">
-				<text>{{ entry.like_count }}</text>
-				<img src="">
-			</div>
+			<button formmethod="post" value="{{entry.key().id()}}" name="edit">Edit</button> 
+			<button formmethod="post" value="{{entry.key().id()}}" name="delete">Delete</button>
+			{% if not likes.filter("post =", entry.key().id()) %}
+				<button formmethod="post" value="{{entry.key().id()}}" name="like">Like</button>
+			{% else %}
+				<button formmethod="post" value="{{entry.key().id()}}" name="like">Liked</button>
+			{% endif %}
+			<button formmethod="post" value="{{entry.key().id()}}" name="comment">Comment</button>
 		</form>
 	</div>
 	{% endfor %}
