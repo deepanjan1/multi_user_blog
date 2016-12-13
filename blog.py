@@ -15,11 +15,12 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
 								autoescape = True)
 
-secret = config.secret
+#Secret is held in an separate file
+SECRET = config.secret
 
 #Hashing functions
 def make_secure_val(val):
-	return '%s|%s' % (val, hmac.new(secret, val).hexdigest())
+	return '%s|%s' % (val, hmac.new(SECRET, val).hexdigest())
 
 def check_secure_val(secure_val):
 	val = secure_val.split('|')[0]
@@ -41,6 +42,19 @@ def valid_pw(name, pw, h):
 
 def users_key(group = 'default'):
     return db.Key.from_path('users', group)
+
+#Functions for validating username, email, and passwords
+USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
+def valid_username(username):
+	return username and USER_RE.match(username)
+
+PASS_RE = re.compile(r"^.{3,20}$")
+def valid_password(password):
+	return password and PASS_RE.match(password)
+
+EMAIL_RE = re.compile(r'^[\S+@[\S]+\.[\S]+$')
+def valid_email(email):
+	return not email or EMAIL_RE.match(email)
 
 #Main Handler
 class Handler(webapp2.RequestHandler):
@@ -76,10 +90,28 @@ class Handler(webapp2.RequestHandler):
 	def get_post_by_id(self, post_id):
 		return Post_Entry.get_by_id(int(post_id))
 
+	def like_post(self, post_id, user):
+		all_likes = Likes.all()
+		this_like = all_likes.filter("post =", post_id).filter("liker =", user).get()
+		post = self.get_post_by_id(post_id)
+		if this_like:
+			db.delete(this_like)
+			post.like = post.like - 1
+			post.put()
+			return False
+		else:
+			a = Likes(liker = user, post = post_id)
+			a.put()
+			post.like = post.like + 1
+			post.put()
+			return True
+
+
 #Blog and Users Table
 class Post_Entry(db.Model):
 	subject = db.StringProperty(required = True)
 	blog_content = db.TextProperty(required = True)
+	like = db.IntegerProperty(required = False, default = 0)
 	creator = db.StringProperty(required = True)
 	created = db.DateTimeProperty(auto_now_add = True)
 	last_modified = db.DateTimeProperty(auto_now = True)
@@ -89,9 +121,20 @@ class Users(db.Model):
 	password = db.StringProperty(required = True)
 	email = db.StringProperty(required = False)
 
+class Comments(db.Model):
+	comment = db.TextProperty(required = True)
+	post = db.IntegerProperty(required = True)
+	created = db.DateTimeProperty(auto_now_add = True)
+
+class Likes(db.Model):
+	liker = db.StringProperty(required = True)
+	post = db.StringProperty(required = True)
+	created = db.DateTimeProperty(auto_now_add = True)
+
 #Page Handlers
 class MainPage(Handler):
 	def get(self):
+		liker = self.read_secure_cookie('userid')
 		entries = db.GqlQuery("select * from Post_Entry order by created desc limit 10")
 		self.render('index.html', entries=entries)
 	def post(self):
@@ -107,13 +150,34 @@ class MainPage(Handler):
 				self.redirect('/blog/delete_post/%s' % str(post.key().id()))
 			else:
 				self.redirect('/blog/delete_post/error')
+		elif self.request.get('like'):
+			post_id = self.request.get('like')
+			post = self.get_post_by_id(self.request.get('like'))
+			user = self.read_secure_cookie('userid')
+			if self.read_secure_cookie('userid') and self.read_secure_cookie('userid') != post.creator:
+				trigger = self.like_post(post_id, user)
+				if trigger == False:
+					self.redirect('/blog/like_status_removed')
+				else:
+					self.redirect('/blog/like_status_added')
+
+			elif self.read_secure_cookie('userid') == post.creator:
+				self.redirect('/blog/like_post/error')
+			elif not self.read_secure_cookie('userid'):
+				self.redirect('/blog/login')
+		elif self.request.get('comment'):
+			post = self.get_post_by_id(self.request.get('comment'))
+			self.redirect('/blog/%s' % str(post.key().id()))
 			
 
 class NewPost(Handler):
 	def render_newpost(self, subject="", blog_content="", error=""):
 		self.render("newpost.html", subject=subject, blog_content=blog_content, error=error)
 	def get(self):
-		self.render_newpost()
+		if self.read_secure_cookie('userid'):
+			self.render_newpost()
+		else:
+			self.redirect('/blog/login')
 	def post(self):
 		subject = self.request.get('subject')
 		blog_content = self.request.get('blog_content')
@@ -131,7 +195,8 @@ class PostPage(Handler):
 		key = db.Key.from_path('Post_Entry', int(post_id))
 		post = db.get(key)
 		user = self.read_secure_cookie('userid')
-		self.render('permalink.html', post = post, user = user)
+		comments = db.GqlQuery("select * from Comments where post = %s order by created desc" % str(post_id))
+		self.render('permalink.html', post = post, user = user, comments = comments)
 	def post(self, post_id):
 		if self.request.get('edit'):
 			post = self.get_post_by_id(self.request.get('edit'))
@@ -145,18 +210,27 @@ class PostPage(Handler):
 				self.redirect('/blog/delete_post/%s' % str(post.key().id()))
 			else:
 				self.redirect('/blog/delete_post/error')
-
-USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
-def valid_username(username):
-	return username and USER_RE.match(username)
-
-PASS_RE = re.compile(r"^.{3,20}$")
-def valid_password(password):
-	return password and PASS_RE.match(password)
-
-EMAIL_RE = re.compile(r'^[\S+@[\S]+\.[\S]+$')
-def valid_email(email):
-	return not email or EMAIL_RE.match(email)
+		elif self.request.get('like'):
+			post_id = self.request.get('like')
+			post = self.get_post_by_id(self.request.get('like'))
+			user = self.read_secure_cookie('userid')
+			if self.read_secure_cookie('userid') and self.read_secure_cookie('userid') != post.creator:
+				trigger = self.like_post(post_id, user)
+				if trigger == False:
+					self.redirect('/blog/like_status_removed')
+				else:
+					self.redirect('/blog/like_status_added')
+			elif self.read_secure_cookie('userid') == post.creator:
+				self.redirect('/blog/like_post/error')
+			elif not self.read_secure_cookie('userid'):
+				self.redirect('/blog/login')
+		elif self.request.get('make_comment'):
+			comment = self.request.get('make_comment')
+			post = int(self.request.get('post'))
+			a = Comments(comment = comment, post = post)
+			a.put()
+			self.redirect('/blog/comment_update/%s' % str(post))
+			
 
 class Signup(Handler):
 	def render_signup(self, username = "", password = "", verify = "", email = "", error_username = "",
@@ -165,8 +239,6 @@ class Signup(Handler):
 					error_username = error_username, error_password = error_password, error_email = error_email, error_username_exists = error_username_exists)	
 	
 	def get(self):
-		# if self.read_secure_cookie('userid'):
-		# 	self.redirect('/blog/welcome')
 		self.render_signup()
 	
 	def post(self):
@@ -273,9 +345,25 @@ class ErrorPage(Handler):
 	def get(self):
 		self.render('error_page.html')
 
+class LikeError(Handler):
+	def get(self):
+		self.render('like_error.html')
+
 class StatusUpdate(Handler):
 	def get(self):
 		self.render('updated.html')
+
+class CommentUpdate(Handler):
+	def get(self, post):
+		self.render('comment_updated.html', post_id = post)
+
+class LikeRemoved(Handler):
+	def get(self):
+		self.render('like_removed.html')
+
+class LikeAdded(Handler):
+	def get(self):
+		self.render('like_added.html')
 
 
 app = webapp2.WSGIApplication([('/blog/?', MainPage),
@@ -290,5 +378,9 @@ app = webapp2.WSGIApplication([('/blog/?', MainPage),
 	                           ('/blog/delete_post/([0-9]+)', DeletePost),
 	                           ('/blog/delete_post/error', ErrorPage),
 	                           ('/blog/post_update', StatusUpdate),
+	                           ('/blog/comment_update/([0-9]+)', CommentUpdate),
+	                           ('/blog/like_post/error', LikeError),
+	                           ('/blog/like_status_removed', LikeRemoved),
+	                           ('/blog/like_status_added', LikeAdded),
 	                           ], 
 								debug=True)
