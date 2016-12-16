@@ -7,8 +7,8 @@
 	<input type="hidden" value="{{ comment.key().id() }}" name="comment_id">
 	<p>{{ comment.comment | safe }}</p>
 	<br>
-	<button type="submit" name="Delete">Delete</button>
-	<button type="submit" name="Cancel">Cancel</button>
+	<button type="submit" value = "True" name="Delete">Delete</button>
+	<button type="submit" value = "True" name="Cancel">Cancel</button>
 </form>
 
 {% endblock %}
