@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<form method="post">
+	<h4>Delete the Following Comment?</h4>
+	<input type="hidden" value="{{ comment.key().id() }}" name="comment_id">
+	<p>{{ comment.comment | safe }}</p>
+	<br>
+	<button type="submit" name="Delete">Delete</button>
+	<button type="submit" name="Cancel">Cancel</button>
+</form>
+
+{% endblock %}

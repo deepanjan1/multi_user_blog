@@ -9,16 +9,18 @@ import hashlib
 import string
 import config
 
+from models import Post_Entry, Users, Comments, Likes
+
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
 								autoescape = True)
 
-#Secret is held in an separate file
+# Secret is held in an separate file
 SECRET = config.secret
 
-#Hashing functions
+# Hashing functions
 def make_secure_val(val):
 	return '%s|%s' % (val, hmac.new(SECRET, val).hexdigest())
 
@@ -43,7 +45,7 @@ def valid_pw(name, pw, h):
 def users_key(group = 'default'):
     return db.Key.from_path('users', group)
 
-#Functions for validating username, email, and passwords
+# Functions for validating username, email, and passwords
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
 	return username and USER_RE.match(username)
@@ -56,8 +58,15 @@ EMAIL_RE = re.compile(r'^[\S+@[\S]+\.[\S]+$')
 def valid_email(email):
 	return not email or EMAIL_RE.match(email)
 
-#Main Handler
+# Main Handler
 class Handler(webapp2.RequestHandler):
+	"""
+    method/class name: Main Handler
+    Args:
+        webapp2.RequestHandler: from google cloud
+    Returns:
+        various functions return different values
+    """
 	def write(self, *a, **kw):
 		self.response.out.write(*a, **kw)
 
@@ -90,6 +99,9 @@ class Handler(webapp2.RequestHandler):
 	def get_post_by_id(self, post_id):
 		return Post_Entry.get_by_id(int(post_id))
 
+	def get_comment_by_id(self, comment_id):
+		return Comments.get_by_id(int(comment_id))
+
 	def like_post(self, post_id, user):
 		all_likes = Likes.all()
 		this_like = all_likes.filter("post =", post_id).filter("liker =", user).get()
@@ -105,34 +117,22 @@ class Handler(webapp2.RequestHandler):
 			post.like = post.like + 1
 			post.put()
 			return True
+	
+	def logged_in_user(self):
+		if not self.read_secure_cookie('userid'):
+			self.redirect('/blog/login')
+		else:
+			pass
 
-
-#Blog and Users Table
-class Post_Entry(db.Model):
-	subject = db.StringProperty(required = True)
-	blog_content = db.TextProperty(required = True)
-	like = db.IntegerProperty(required = False, default = 0)
-	creator = db.StringProperty(required = True)
-	created = db.DateTimeProperty(auto_now_add = True)
-	last_modified = db.DateTimeProperty(auto_now = True)
-
-class Users(db.Model):
-	username = db.StringProperty(required = True)
-	password = db.StringProperty(required = True)
-	email = db.StringProperty(required = False)
-
-class Comments(db.Model):
-	comment = db.TextProperty(required = True)
-	post = db.IntegerProperty(required = True)
-	created = db.DateTimeProperty(auto_now_add = True)
-
-class Likes(db.Model):
-	liker = db.StringProperty(required = True)
-	post = db.StringProperty(required = True)
-	created = db.DateTimeProperty(auto_now_add = True)
-
-#Page Handlers
+# Page Handlers
 class MainPage(Handler):
+	"""
+    method/class name: MainPage (Blog homepage)
+    Args:
+        Handler
+    Returns:
+        The '/blog' page and retrieves blog posts
+    """
 	def get(self):
 		liker = self.read_secure_cookie('userid')
 		entries = db.GqlQuery("select * from Post_Entry order by created desc limit 10")
@@ -141,15 +141,15 @@ class MainPage(Handler):
 		if self.request.get('edit'):
 			post = self.get_post_by_id(self.request.get('edit'))
 			if self.read_secure_cookie('userid') == post.creator:
-				self.redirect('/blog/edit_post/%s' % str(post.key().id()))
+				self.redirect('/blog/edit-post/%s' % str(post.key().id()))
 			else:
-				self.redirect('/blog/edit_post/error')
+				self.redirect('/blog/edit-post/error')
 		elif self.request.get('delete'):
 			post = self.get_post_by_id(self.request.get('delete'))
 			if self.read_secure_cookie('userid') == post.creator:
-				self.redirect('/blog/delete_post/%s' % str(post.key().id()))
+				self.redirect('/blog/delete-post/%s' % str(post.key().id()))
 			else:
-				self.redirect('/blog/delete_post/error')
+				self.redirect('/blog/delete-post/error')
 		elif self.request.get('like'):
 			post_id = self.request.get('like')
 			post = self.get_post_by_id(self.request.get('like'))
@@ -157,12 +157,12 @@ class MainPage(Handler):
 			if self.read_secure_cookie('userid') and self.read_secure_cookie('userid') != post.creator:
 				trigger = self.like_post(post_id, user)
 				if trigger == False:
-					self.redirect('/blog/like_status_removed')
+					self.redirect('/blog/like-status-removed')
 				else:
-					self.redirect('/blog/like_status_added')
+					self.redirect('/blog/like-status-added')
 
 			elif self.read_secure_cookie('userid') == post.creator:
-				self.redirect('/blog/like_post/error')
+				self.redirect('/blog/like-post/error')
 			elif not self.read_secure_cookie('userid'):
 				self.redirect('/blog/login')
 		elif self.request.get('comment'):
@@ -179,16 +179,19 @@ class NewPost(Handler):
 		else:
 			self.redirect('/blog/login')
 	def post(self):
-		subject = self.request.get('subject')
-		blog_content = self.request.get('blog_content')
-		creator = self.read_secure_cookie('userid')
-		if subject and blog_content:
-			a = Post_Entry(subject = subject, blog_content = blog_content, creator = creator)
-			a.put()
-			self.redirect('/blog/%s' % str(a.key().id()))
+		if self.read_secure_cookie('userid'):
+			subject = self.request.get('subject')
+			blog_content = self.request.get('blog_content')
+			creator = self.read_secure_cookie('userid')
+			if subject and blog_content:
+				a = Post_Entry(subject = subject, blog_content = blog_content, creator = creator)
+				a.put()
+				self.redirect('/blog/%s' % str(a.key().id()))
+			else:
+				error  = "Please submit both a subject and blog content."
+				self.render_newpost(subject, blog_content, error)
 		else:
-			error  = "Please submit both a subject and blog content."
-			self.render_newpost(subject, blog_content, error)
+			self.redirect('/blog/login')
 
 class PostPage(Handler):
 	def get(self, post_id):
@@ -198,18 +201,19 @@ class PostPage(Handler):
 		comments = db.GqlQuery("select * from Comments where post = %s order by created desc" % str(post_id))
 		self.render('permalink.html', post = post, user = user, comments = comments)
 	def post(self, post_id):
+		self.logged_in_user()
 		if self.request.get('edit'):
 			post = self.get_post_by_id(self.request.get('edit'))
 			if self.read_secure_cookie('userid') == post.creator:
-				self.redirect('/blog/edit_post/%s' % str(post.key().id()))
+				self.redirect('/blog/edit-post/%s' % str(post.key().id()))
 			else:
-				self.redirect('/blog/edit_post/error')
+				self.redirect('/blog/edit-post/error')
 		elif self.request.get('delete'):
 			post = self.get_post_by_id(self.request.get('delete'))
 			if self.read_secure_cookie('userid') == post.creator:
-				self.redirect('/blog/delete_post/%s' % str(post.key().id()))
+				self.redirect('/blog/delete-post/%s' % str(post.key().id()))
 			else:
-				self.redirect('/blog/delete_post/error')
+				self.redirect('/blog/delete-post/error')
 		elif self.request.get('like'):
 			post_id = self.request.get('like')
 			post = self.get_post_by_id(self.request.get('like'))
@@ -217,20 +221,37 @@ class PostPage(Handler):
 			if self.read_secure_cookie('userid') and self.read_secure_cookie('userid') != post.creator:
 				trigger = self.like_post(post_id, user)
 				if trigger == False:
-					self.redirect('/blog/like_status_removed')
+					self.redirect('/blog/like-status-removed')
 				else:
-					self.redirect('/blog/like_status_added')
+					self.redirect('/blog/like-status-added')
 			elif self.read_secure_cookie('userid') == post.creator:
-				self.redirect('/blog/like_post/error')
+				self.redirect('/blog/like-post/error')
 			elif not self.read_secure_cookie('userid'):
 				self.redirect('/blog/login')
+		# Create Comment
 		elif self.request.get('make_comment'):
 			comment = self.request.get('make_comment')
 			post = int(self.request.get('post'))
-			a = Comments(comment = comment, post = post)
+			commenter = self.read_secure_cookie('userid')
+			a = Comments(comment = comment, post = post, commenter = commenter)
 			a.put()
-			self.redirect('/blog/comment_update/%s' % str(post))
-			
+			self.redirect('/blog/comment-update/%s' % str(post))
+		# Edit Comment
+		elif self.request.get('edit_comment'):
+			comment_id = self.request.get('edit_comment')
+			comment = self.get_comment_by_id(comment_id)
+			if self.read_secure_cookie('userid') == comment.commenter:
+				self.redirect('/blog/comment-edit/%s' % comment_id)
+			else:
+				self.redirect('/blog/edit-post/error')
+		# Delete Comment
+		elif self.request.get('delete_comment'):
+			comment_id = self.request.get('delete_comment')
+			comment = self.get_comment_by_id(comment_id)
+			if self.read_secure_cookie('userid') == comment.commenter:
+				self.redirect('/blog/comment-delete/%s' % comment_id)	
+			else:
+				self.redirect('/blog/edit-post/error')
 
 class Signup(Handler):
 	def render_signup(self, username = "", password = "", verify = "", email = "", error_username = "",
@@ -311,35 +332,95 @@ class Logout(Handler):
 		self.redirect('/blog/signup')
 
 class EditPost(Handler):
-	def get(self, post):
-		key = db.Key.from_path('Post_Entry', int(post))
-		post = db.get(key)
-		self.render('edit_post.html', blog = post)
-	def post(self, post):
-		subject = self.request.get('subject')
-		blog_content = self.request.get('blog_content')
-		post_id = self.request.get('Save')
-		if post_id:
+		def get(self, post):
+			self.logged_in_user()
+			key = db.Key.from_path('Post_Entry', int(post))
+			post = db.get(key)
+			if self.read_secure_cookie('userid') == post.creator:	
+				self.render('edit_post.html', blog = post)
+			else:
+				self.redirect('/blog/login')	
+		def post(self, post):
+			self.logged_in_user()
+			subject = self.request.get('subject')
+			blog_content = self.request.get('blog_content')
+			post_id = self.request.get('Save')
 			post = Post_Entry.get_by_id(int(post_id))
-			post.subject = subject
-			post.blog_content = blog_content
-			post.put()
-			self.redirect('/blog/%s' % str(post.key().id()))
-		elif self.request.get('Cancel'):
-			self.redirect('/blog/')
+			if self.read_secure_cookie('userid') == post.creator:	
+				if post_id:
+					post.subject = subject
+					post.blog_content = blog_content
+					post.put()
+					self.redirect('/blog/%s' % str(post.key().id()))
+				elif self.request.get('Cancel'):
+					self.redirect('/blog/')
+			else:
+				self.redirect('/blog/edit-post/error')	
 
 class DeletePost(Handler):
 	def get(self, post):
+		self.logged_in_user()
 		key = db.Key.from_path('Post_Entry', int(post))
 		post = db.get(key)
-		self.render('delete_post.html', blog = post)
+		if self.read_secure_cookie('userid') == post.creator:	
+			self.render('delete_post.html', blog = post)
+		else:
+			self.redirect('/blog/edit-post/error')
 	def post(self, post):
-		if self.request.get('Delete'):
-			post = self.get_post_by_id(self.request.get('Delete'))
-			post.delete()
-			self.redirect('/blog/post_update')
-		elif self.request.get('Cancel'):
-			self.redirect('/blog/')
+		self.logged_in_user()
+		post = self.get_post_by_id(self.request.get('Delete'))
+		if self.read_secure_cookie('userid') == post.creator:	
+			if self.request.get('Delete'):
+				post.delete()
+				self.redirect('/blog/post-update')
+			elif self.request.get('Cancel'):
+				self.redirect('/blog/')
+		else:
+			self.redirect('/blog/edit-post/error')	
+
+class CommentDelete(Handler):
+	def get(self, comment_id):
+		self.logged_in_user()
+		key = db.Key.from_path('Comments', int(comment_id))
+		comment = db.get(key)
+		if self.read_secure_cookie('userid') == comment.commenter:
+			self.render('delete_comment.html', comment = comment)
+		else:
+			self.redirect('/blog/edit-post/error')
+	def post(self, comment_id):
+		self.logged_in_user()
+		comment_id = self.request.get('comment_id')
+		comment = self.get_comment_by_id(comment_id)
+		if self.read_secure_cookie('userid') == comment.commenter:
+			if self.request.get('Delete'):
+				comment.delete()
+				self.redirect('/blog/comment-update/%s' % str(comment.post))
+			elif self.request.get('Cancel'):
+				self.redirect('/blog/')
+		else:
+			self.redirect('/blog/edit-post/error')
+
+class CommentEdit(Handler):
+	def get(self, comment_id):
+		self.logged_in_user()
+		key = db.Key.from_path('Comments', int(comment_id))
+		comment = db.get(key)
+		if self.read_secure_cookie('userid') == comment.commenter:
+			self.render('edit_comment.html', comment = comment)
+		else:
+			self.redirect('/blog/edit-post/error')
+	def post(self, comment_id):
+		self.logged_in_user()
+		comment_id = self.request.get('comment_id')
+		comment_content = self.request.get('edited_comment')
+		comment = self.get_comment_by_id(comment_id)
+		if self.read_secure_cookie('userid') == comment.commenter:
+			comment.comment = comment_content
+			comment.put()
+			self.redirect('/blog/comment-update/%s' % str(comment.post))
+		else:
+			self.redirect('/blog/edit-post/error')
+
 
 class ErrorPage(Handler):
 	def get(self):
@@ -367,20 +448,23 @@ class LikeAdded(Handler):
 
 
 app = webapp2.WSGIApplication([('/blog/?', MainPage),
+							   ('/', MainPage),
 	                           ('/blog/newpost', NewPost),
 	                           ('/blog/([0-9]+)', PostPage),
 	                           ('/blog/signup', Signup), 
 	                           ('/blog/welcome', Welcome), 
 	                           ('/blog/login', Login), 
 	                           ('/blog/logout', Logout),
-	                           ('/blog/edit_post/([0-9]+)', EditPost),
-	                           ('/blog/edit_post/error', ErrorPage),
-	                           ('/blog/delete_post/([0-9]+)', DeletePost),
-	                           ('/blog/delete_post/error', ErrorPage),
-	                           ('/blog/post_update', StatusUpdate),
-	                           ('/blog/comment_update/([0-9]+)', CommentUpdate),
-	                           ('/blog/like_post/error', LikeError),
-	                           ('/blog/like_status_removed', LikeRemoved),
-	                           ('/blog/like_status_added', LikeAdded),
+	                           ('/blog/edit-post/([0-9]+)', EditPost),
+	                           ('/blog/edit-post/error', ErrorPage),
+	                           ('/blog/delete-post/([0-9]+)', DeletePost),
+	                           ('/blog/delete-post/error', ErrorPage),
+	                           ('/blog/post-update', StatusUpdate),
+	                           ('/blog/comment-update/([0-9]+)', CommentUpdate),
+	                           ('/blog/comment-edit/([0-9]+)', CommentEdit),
+	                           ('/blog/comment-delete/([0-9]+)', CommentDelete),
+	                           ('/blog/like-post/error', LikeError),
+	                           ('/blog/like-status-removed', LikeRemoved),
+	                           ('/blog/like-status-added', LikeAdded),
 	                           ], 
 								debug=True)

@@ -25,6 +25,8 @@
 				<h4>Comment</h4>
 				<pre>{{ comment.comment | safe }}</pre>
 				<p>Created: {{ comment.created }}</p>
+				<button type="submit" value="{{ comment.key().id() }}" name="edit_comment">Edit</button>
+				<button type="submit" value="{{ comment.key().id() }}" name="delete_comment">Delete</button>
 			</div>
 		{% endfor %}
 	</form>

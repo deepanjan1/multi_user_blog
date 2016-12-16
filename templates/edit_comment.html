@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<form method="post">
+	<h4>Edit Comment</h4>
+	<input type="hidden" value="{{ comment.key().id() }}" name="comment_id">
+	<textarea rows = "10" cols="80" name="edited_comment">{{ comment.comment | safe }}</textarea>
+	<br>
+	<button>Submit</button>
+</form>
+
+{% endblock %}
