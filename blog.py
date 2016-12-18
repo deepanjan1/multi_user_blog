@@ -146,12 +146,12 @@ Returns:
             pass
 
     def post_exists(self, post):
-    	if not post:
-    		self.error(404)
+        if not post:
+            self.error(404)
 
-	def comment_exists(self,comment):
-		if not comment:
-			self.error(404)
+        def comment_exists(self, comment):
+            if not comment:
+                self.error(404)
 
 
 # Page Handlers
@@ -403,9 +403,9 @@ class Login(Handler):
         password = self.request.get('password')
         u = Users.all().filter('username =', name).get()
         if u:
-        	if valid_pw(name, password, u.password):
-        		self.login(u)
-        		self.redirect('/blog/welcome')
+            if valid_pw(name, password, u.password):
+                self.login(u)
+                self.redirect('/blog/welcome')
         else:
             self.render_login(
                 username=name,
@@ -456,14 +456,14 @@ class DeletePost(Handler):
         self.logged_in_user()
         key = db.Key.from_path('Post_Entry', int(post))
         post = db.get(key)
-        self.post_exists(post)        
+        self.post_exists(post)
         if self.read_secure_cookie('userid') == post.creator:
             self.render('delete_post.html', blog=post)
         else:
             self.redirect('/blog/edit-post/error')
 
     def post(self, post):
-        self.logged_in_user()        
+        self.logged_in_user()
         post = self.get_post_by_id(self.request.get('Delete'))
         self.post_exists(post)
         if self.read_secure_cookie('userid') == post.creator:
