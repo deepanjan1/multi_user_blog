@@ -121,6 +121,7 @@ Returns:
         return Comments.get_by_id(int(comment_id))
 
     def like_post(self, post_id, user):
+        self.logged_in_user()
         all_likes = Likes.all()
         this_like = all_likes.filter(
             "post =", post_id).filter(
@@ -143,6 +144,15 @@ Returns:
             self.redirect('/blog/login')
         else:
             pass
+
+    def post_exists(self, post):
+    	if not post:
+    		self.error(404)
+
+	def comment_exists(self,comment):
+		if not comment:
+			self.error(404)
+
 
 # Page Handlers
 
@@ -206,28 +216,24 @@ class NewPost(Handler):
             error=error)
 
     def get(self):
-        if self.read_secure_cookie('userid'):
-            self.render_newpost()
-        else:
-            self.redirect('/blog/login')
+        self.logged_in_user()
+        self.render_newpost()
 
     def post(self):
-        if self.read_secure_cookie('userid'):
-            subject = self.request.get('subject')
-            blog_content = self.request.get('blog_content')
-            creator = self.read_secure_cookie('userid')
-            if subject and blog_content:
-                a = Post_Entry(
-                    subject=subject,
-                    blog_content=blog_content,
-                    creator=creator)
-                a.put()
-                self.redirect('/blog/%s' % str(a.key().id()))
-            else:
-                error = "Please submit both a subject and blog content."
-                self.render_newpost(subject, blog_content, error)
+        self.logged_in_user()
+        subject = self.request.get('subject')
+        blog_content = self.request.get('blog_content')
+        creator = self.read_secure_cookie('userid')
+        if subject and blog_content:
+            a = Post_Entry(
+                subject=subject,
+                blog_content=blog_content,
+                creator=creator)
+            a.put()
+            self.redirect('/blog/%s' % str(a.key().id()))
         else:
-            self.redirect('/blog/login')
+            error = "Please submit both a subject and blog content."
+            self.render_newpost(subject, blog_content, error)
 
 
 class PostPage(Handler):
@@ -235,14 +241,17 @@ class PostPage(Handler):
     def get(self, post_id):
         key = db.Key.from_path('Post_Entry', int(post_id))
         post = db.get(key)
+        self.post_exists(post)
         user = self.read_secure_cookie('userid')
         comments = db.GqlQuery(
             "select * from Comments where post = %s order by created desc" %
             str(post_id))
+        self.comment_exists(comments)
         self.render('permalink.html', post=post, user=user, comments=comments)
 
     def post(self, post_id):
         self.logged_in_user()
+        self.post_exists()
         if self.request.get('edit'):
             post = self.get_post_by_id(self.request.get('edit'))
             if self.read_secure_cookie('userid') == post.creator:
@@ -276,12 +285,14 @@ class PostPage(Handler):
             post = int(self.request.get('post'))
             commenter = self.read_secure_cookie('userid')
             a = Comments(comment=comment, post=post, commenter=commenter)
+            self.comment_exists(a)
             a.put()
             self.redirect('/blog/comment-update/%s' % str(post))
         # Edit Comment
         elif self.request.get('edit_comment'):
             comment_id = self.request.get('edit_comment')
             comment = self.get_comment_by_id(comment_id)
+            self.comment_exists(comment)
             if self.read_secure_cookie('userid') == comment.commenter:
                 self.redirect('/blog/comment-edit/%s' % comment_id)
             else:
@@ -290,6 +301,7 @@ class PostPage(Handler):
         elif self.request.get('delete_comment'):
             comment_id = self.request.get('delete_comment')
             comment = self.get_comment_by_id(comment_id)
+            self.comment_exists(comment)
             if self.read_secure_cookie('userid') == comment.commenter:
                 self.redirect('/blog/comment-delete/%s' % comment_id)
             else:
@@ -390,10 +402,10 @@ class Login(Handler):
         name = self.request.get('username')
         password = self.request.get('password')
         u = Users.all().filter('username =', name).get()
-
-        if valid_pw(name, password, u.password):
-            self.login(u)
-            self.redirect('/blog/welcome')
+        if u:
+        	if valid_pw(name, password, u.password):
+        		self.login(u)
+        		self.redirect('/blog/welcome')
         else:
             self.render_login(
                 username=name,
@@ -413,6 +425,7 @@ class EditPost(Handler):
         self.logged_in_user()
         key = db.Key.from_path('Post_Entry', int(post))
         post = db.get(key)
+        self.post_exists(post)
         if self.read_secure_cookie('userid') == post.creator:
             self.render('edit_post.html', blog=post)
         else:
@@ -424,6 +437,7 @@ class EditPost(Handler):
         blog_content = self.request.get('blog_content')
         post_id = self.request.get('Save')
         post = Post_Entry.get_by_id(int(post_id))
+        self.post_exists(post)
         if self.read_secure_cookie('userid') == post.creator:
             if post_id:
                 post.subject = subject
@@ -442,14 +456,16 @@ class DeletePost(Handler):
         self.logged_in_user()
         key = db.Key.from_path('Post_Entry', int(post))
         post = db.get(key)
+        self.post_exists(post)        
         if self.read_secure_cookie('userid') == post.creator:
             self.render('delete_post.html', blog=post)
         else:
             self.redirect('/blog/edit-post/error')
 
     def post(self, post):
-        self.logged_in_user()
+        self.logged_in_user()        
         post = self.get_post_by_id(self.request.get('Delete'))
+        self.post_exists(post)
         if self.read_secure_cookie('userid') == post.creator:
             if self.request.get('Delete'):
                 post.delete()
@@ -466,6 +482,7 @@ class CommentDelete(Handler):
         self.logged_in_user()
         key = db.Key.from_path('Comments', int(comment_id))
         comment = db.get(key)
+        self.comment_exists(comment)
         if self.read_secure_cookie('userid') == comment.commenter:
             self.render('delete_comment.html', comment=comment)
         else:
@@ -475,6 +492,7 @@ class CommentDelete(Handler):
         self.logged_in_user()
         comment_id = self.request.get('comment_id')
         comment = self.get_comment_by_id(comment_id)
+        self.comment_exists(comment)
         post_id = comment.post
         if self.read_secure_cookie('userid') == comment.commenter:
             if self.request.get('Delete'):
@@ -492,6 +510,7 @@ class CommentEdit(Handler):
         self.logged_in_user()
         key = db.Key.from_path('Comments', int(comment_id))
         comment = db.get(key)
+        self.comment_exists(comment)
         if self.read_secure_cookie('userid') == comment.commenter:
             self.render('edit_comment.html', comment=comment)
         else:
@@ -502,6 +521,7 @@ class CommentEdit(Handler):
         comment_id = self.request.get('comment_id')
         comment_content = self.request.get('edited_comment')
         comment = self.get_comment_by_id(comment_id)
+        self.comment_exists(comment)
         if self.read_secure_cookie('userid') == comment.commenter:
             comment.comment = comment_content
             comment.put()
