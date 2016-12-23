@@ -1,27 +1,42 @@
 <!DOCTYPE html>
 
-<html> 
+<html lang="en"> 
 	<head>
 		<title>Deep's Blog</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta charset="utf-8"/>
+    	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+    	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"/>
+		<link rel="stylesheet" type="text/css" href="../static/bootstrap-theme.min.css">
+		<link rel="stylesheet" type="text/css" href="../static/bootstrap.min.css">
+		<link type="text/css" rel="stylesheet" href="/static/master.css" />
+		<link rel="stylesheet" type="text/css" href="/static/fonts/glyphicons-halflings-regular.svg">
 	</head>
 
 	<body>
-		<header name = "title" style = "text-align: center">
-			<h1>
-				<a href="/blog" class="main-title"> Deep's Blog </a>
-			</h1>
-			<div name = "login_logout">
-				<a href="/blog/login"> Login</a>
-				<text>/</text>
-				<a href="/blog/logout"> Logout</a>
-				<text>/</text>
-				<a href="/blog/signup"> Signup</a>
+		<nav class="navbar navbar-default navbar-fixed-top">
+			<div class="container-fluid">
+				<header>
+					<div class="row">
+						<div class="col-md-4">
+							<h3 class="text-left logo_margin"><a href="/blog"> Casting Dispersions </a></h3>
+						</div>
+						<div class="col-md-4 top_margin">
+							<div class = "text-center">
+								<a href="/blog/newpost" class="btn btn-info btn-md">
+								<span class="glyphicon glyphicon-plus"></span>
+								New Post</a>
+							</div>
+						</div>
+						<div class="col-md-4 top_margin">
+							<a href="/blog/login" role="button" class="btn btn-default"> Login</a>
+							<a href="/blog/logout" role="button" class="btn btn-default"> Logout</a>
+							<a href="/blog/signup" role="button" class="btn btn-default"> Signup</a>
+						</div>
+					</div>
+
+				</header>
 			</div>
-			<div class = "new_post">
-				<a href="/blog/newpost"> New Post</a>
-			</div>
-		</header>
+		</nav>
 		{% block content %}
 		{% endblock %}
 	</body>

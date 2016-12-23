@@ -1,35 +1,61 @@
 {% extends "base.html" %}
 
+<head>
+{% block head %}
+<title>{% block title %} Login {% endblock %}</title>
+    <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+      <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet"/>
+    <link rel="stylesheet" type="text/css" href="../static/bootstrap-theme.min.css">
+    <link rel="stylesheet" type="text/css" href="../static/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="/static/master.css" />
+    <link rel="stylesheet" type="text/css" href="/static/fonts/glyphicons-halflings-regular.svg">
+{% endblock %}
+</head>
+
 {% block content %}
 
-<h2>Login</h2>
-<form method="post">
-  <table>
-    <tr>
-      <td class="label">
+<div class="container">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title nav-padding">Login</h3>
+    </div>
+    <form method="post">
+      <div class="panel-body">
         Username
-      </td>
-      <td>
         <input type="text" name="username" value="{{ username }}">
-      </td>
-    </tr>
+      </div>
+    </form>
+  </div>
+    <form method="post">
+      
 
-    <tr>
-      <td class="label">
-        Password
-      </td>
-      <td>
-        <input type="password" name="password" value="">
-      </td>
-      <td class="error">
-        {{ error }}
-      </td>
-    </tr>
-  </table>
+      <table>
+        <tr>
+          <td class="label">
+            Username
+          </td>
+          <td>
+            <input type="text" name="username" value="{{ username }}">
+          </td>
+        </tr>
 
-  <input type="submit">
-</form>
+        <tr>
+          <td class="label">
+            Password
+          </td>
+          <td>
+            <input type="password" name="password" value="">
+          </td>
+          <td class="error">
+            {{ error }}
+          </td>
+        </tr>
+      </table>
 
+      <input type="submit">
+    </form>
+</div>
 
 
 {% endblock %}

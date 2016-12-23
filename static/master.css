@@ -1,0 +1,46 @@
+* {
+	font-family: 'Roboto', sans-serif;
+	font-weight: 400;
+}
+
+.container {
+    margin: 2em 5em auto 5em;
+    max-width: 650px;
+
+}
+
+h3 {
+	margin-top: 10px;
+	margin-bottom: 20px; 
+}
+
+#authentication {
+
+}
+
+.new_post {
+	padding-left: 15px;
+}
+
+.vertical-align {
+	vertical-align: middle;
+	float: none;
+}
+
+.top_margin {
+	margin-top: 10px;
+}
+
+.logo_margin {
+	margin-top: 15px;
+}
+
+.nav-padding {
+	margin-top: 65px;
+}
+
+.label {
+
+	color:black;
+	font-size: 100%;
+}
